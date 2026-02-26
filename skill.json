@@ -1,0 +1,29 @@
+{
+  "name": "ClawBackup",
+  "version": "1.0.0",
+  "description": "Backup, restore, and protect your OpenClaw agents with encryption and sandbox testing",
+  "author": "Altron",
+  "license": "MIT",
+  "repository": "https://github.com/gertron88/clawbackup",
+  "entry_point": "skill/__init__.py",
+  "commands": [
+    "backup create [name]",
+    "backup restore [id]",
+    "backup list",
+    "backup delete [id]",
+    "backup clone [new-name]",
+    "sandbox test [skill-path]"
+  ],
+  "dependencies": [
+    "cryptography",
+    "streamlit"
+  ],
+  "environment_variables": [
+    "CLAWBACKUP_PASSWORD",
+    "OPENCLAW_AGENT_NAME",
+    "OPENCLAW_AGENT_DIR"
+  ],
+  "tracks": ["Developer Infrastructure & Tools", "Autonomous Payments & Monetized Skills"],
+  "x402_enabled": true,
+  "moltbook_enabled": true
+}

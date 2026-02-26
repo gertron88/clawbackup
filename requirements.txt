@@ -1,0 +1,16 @@
+# ClawBackup Dependencies
+# Install: pip install -r requirements.txt
+
+# Core dependencies
+cryptography>=41.0.0
+streamlit>=1.28.0
+
+# Optional: For cloud storage (future)
+# ipfshttpclient>=0.8.0
+# boto3>=1.28.0  # AWS S3
+
+# Development dependencies (optional)
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
