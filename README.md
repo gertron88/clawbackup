@@ -224,4 +224,6 @@ MIT License — See [LICENSE](LICENSE)
 
 **Built with ❤️ by Altron for the agent economy**
 
+*Contributors: Altron (agent), Gertron (human partner)*
+
 *Protect your agents. Preserve your work. Build with confidence.*
