@@ -82,6 +82,9 @@ class ClawBackupSkill:
                 else:
                     return "Usage: sandbox test [skill_path]"
             
+            elif action == 'moltbook':
+                return self._cmd_moltbook(subaction)
+            
             elif action == 'help':
                 return self._help()
             
@@ -266,6 +269,77 @@ class ClawBackupSkill:
             return result
         return {'success': False, 'note': 'Moltbook notifications disabled'}
     
+    def _cmd_moltbook(self, subaction: str = None) -> str:
+        """Handle Moltbook-related commands."""
+        if subaction == 'status':
+            status = self.moltbook.check_status()
+            claimed = status.get('claimed', False)
+            
+            lines = [
+                "🦞 Moltbook Integration Status",
+                "",
+                f"Agent: {self.moltbook.agent_name}",
+                f"Submolt: {self.moltbook.submolt}",
+                f"API Key: {'✅ Configured' if self.moltbook.api_key else '❌ Not set'}",
+                f"Status: {status.get('status', 'unknown')}",
+            ]
+            
+            if claimed:
+                lines.append("✅ Ready to post!")
+            else:
+                lines.extend([
+                    "",
+                    "⚠️ Agent not yet claimed!",
+                    f"Claim URL: {status.get('claim_url', 'Check moltbook.com')}",
+                    "",
+                    "Posts will be queued until claimed."
+                ])
+            
+            # Queue stats
+            queue_stats = self.moltbook.get_queue_stats()
+            if queue_stats['pending_posts'] > 0:
+                lines.extend([
+                    "",
+                    f"📤 Queued posts: {queue_stats['pending_posts']}",
+                    "Run 'moltbook flush' to retry sending."
+                ])
+            
+            return '\n'.join(lines)
+        
+        elif subaction == 'flush':
+            results = self.moltbook.flush_queue()
+            
+            if not results:
+                return "No queued posts to flush."
+            
+            success = sum(1 for r in results if r.get('success'))
+            failed = len(results) - success
+            
+            return (
+                f"📤 Flushed {len(results)} queued posts:\n"
+                f"  ✅ Successful: {success}\n"
+                f"  ❌ Failed: {failed}\n"
+                f"\nRemaining in queue: {len(self.moltbook.queue)}"
+            )
+        
+        elif subaction == 'test':
+            result = self.moltbook.post_learning(
+                "Testing Moltbook integration from ClawBackup! 🛡️"
+            )
+            
+            if result.get('success'):
+                return f"✅ Test post successful!\nPost ID: {result.get('post_id')}"
+            elif result.get('queued'):
+                return f"⏳ Post queued: {result.get('error')}\nWill retry automatically."
+            else:
+                return f"❌ Post failed: {result.get('error')}"
+        
+        else:
+            return """Moltbook commands:
+  moltbook status  - Check connection status
+  moltbook flush   - Retry sending queued posts
+  moltbook test    - Send a test post"""
+    
     def _help(self) -> str:
         """Show help message."""
         return """
@@ -278,6 +352,9 @@ Commands:
   backup delete [id]        - Delete a backup
   backup clone [new-name]   - Clone agent to new instance
   sandbox test [skill-path] - Test skill safely in sandbox
+  moltbook status           - Check Moltbook integration
+  moltbook flush            - Retry queued posts
+  moltbook test             - Send test post
   help                      - Show this help
 
 Security Features:

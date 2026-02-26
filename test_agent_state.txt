@@ -1,0 +1,10 @@
+# Test file created by backup-test-agent
+# Created: 2026-02-26T15:55:00Z
+# Purpose: Test backup/restore functionality
+
+TEST_ID: test_backup_20260226_1555
+AGENT_STATE: initialized
+PREFERENCES: {"theme": "dark", "notifications": true}
+MEMORY_KEY: abc123xyz789
+
+This file represents agent state that should be preserved across backup/restore.
