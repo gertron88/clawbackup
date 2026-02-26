@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from backup_engine import BackupEngine, SecretScanner
 from sandbox import SandboxEnvironment
+from moltbook_client import MoltbookClient
 
 
 class ClawBackupSkill:
@@ -23,6 +24,7 @@ class ClawBackupSkill:
         self.agent_name = os.environ.get('OPENCLAW_AGENT_NAME', 'default-agent')
         self.engine = BackupEngine(self.agent_name)
         self.sandbox = SandboxEnvironment(self.agent_name)
+        self.moltbook = MoltbookClient(submolt='lablab')  # Real Moltbook integration
         self.config = self._load_config()
     
     def _load_config(self):
@@ -109,11 +111,11 @@ class ClawBackupSkill:
         
         # Notify Moltbook if enabled
         if self.config.get('moltbook_notifications'):
-            self._notify_moltbook(
-                f"✅ Created backup '{result['name']}'\n"
-                f"Files: {result['files_backed']} | "
-                f"Secrets redacted: {result['secrets_redacted']} | "
-                f"Size: {result['size'] / 1024:.1f} KB"
+            self.moltbook.post_backup_created(
+                backup_name=result['name'],
+                files=result['files_backed'],
+                secrets=result['secrets_redacted'],
+                size=result['size'] / 1024
             )
         
         return (
@@ -157,7 +159,7 @@ class ClawBackupSkill:
         result = self.engine.restore_backup(backup_id, agent_dir, password)
         
         if result['success']:
-            self._notify_moltbook(f"🔄 Restored to backup '{backup_id}' successfully!")
+            self.moltbook.post_restore_completed(backup_id=result['backup_id'], success=True)
             return (
                 f"✅ Restore completed!\n"
                 f"Backup ID: {result['backup_id']}\n"
@@ -199,7 +201,7 @@ class ClawBackupSkill:
         success = self.engine.delete_backup(backup_id)
         
         if success:
-            self._notify_moltbook(f"🗑️ Deleted backup '{backup_id}'")
+            self.moltbook.post(f"🗑️ Deleted backup '{backup_id}'", 'update')
             return f"✅ Backup {backup_id} deleted."
         else:
             return f"❌ Backup {backup_id} not found."
@@ -221,7 +223,7 @@ class ClawBackupSkill:
         # 3. Update agent name in config
         # 4. Return instructions for starting new agent
         
-        self._notify_moltbook(f"🐑 Cloned agent to '{new_name}' from backup {backup['id']}")
+        self.moltbook.post(f"🐑 Cloned agent to '{new_name}' from backup {backup['id']}", 'milestone')
         
         return (
             f"✅ Agent cloned successfully!\n"
@@ -249,32 +251,20 @@ class ClawBackupSkill:
         report_text = self.sandbox.generate_report(report)
         
         # Notify Moltbook
-        self._notify_moltbook(
-            f"🧪 Sandboxed skill '{report.skill_name}': {report.status.upper()}\n"
-            f"Alerts: {len(report.alerts)} | Duration: {report.duration_ms}ms"
+        self.moltbook.post_sandbox_result(
+            skill_name=report.skill_name,
+            status=report.status,
+            alerts=len(report.alerts)
         )
         
         return report_text
     
-    def _notify_moltbook(self, message: str):
-        """Post update to Moltbook."""
-        # In production, this would call Moltbook API
-        # For now, log to file
-        log_path = Path(__file__).parent / 'moltbook_queue.json'
-        
-        posts = []
-        if log_path.exists():
-            with open(log_path) as f:
-                posts = json.load(f)
-        
-        posts.append({
-            'timestamp': json.dumps({}),
-            'message': message,
-            'submolt': 'lablab'
-        })
-        
-        with open(log_path, 'w') as f:
-            json.dump(posts, f, indent=2)
+    def _notify_moltbook(self, message: str, post_type: str = 'update'):
+        """Post update to Moltbook using real client."""
+        if self.config.get('moltbook_notifications', True):
+            result = self.moltbook.post(message, post_type)
+            return result
+        return {'success': False, 'note': 'Moltbook notifications disabled'}
     
     def _help(self) -> str:
         """Show help message."""
