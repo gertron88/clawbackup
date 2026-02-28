@@ -1,17 +1,17 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '../lib/supabase';
+import { supabaseAdmin } from '../../../src/lib/supabase';
 import { 
   hashApiKey, 
   hashPassword, 
   generateRecoveryCodes, 
   hashRecoveryCodes 
-} from '../lib/crypto';
+} from '../../../src/lib/crypto';
 import { 
   setCorsHeaders, 
   handleOptions, 
   errorResponse, 
   successResponse 
-} from '../lib/auth';
+} from '../../../src/lib/auth';
 
 // Generate API key
 function generateApiKey(): string {

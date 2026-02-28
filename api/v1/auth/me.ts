@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateAgent, setCorsHeaders, handleOptions, errorResponse, successResponse } from '../../lib/auth';
+import { authenticateAgent, setCorsHeaders, handleOptions, errorResponse, successResponse } from '../../../src/lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
