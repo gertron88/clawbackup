@@ -37,8 +37,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { pathname } = new URL(req.url || '/', 'http://localhost');
 
-  // Health check
-  if (pathname === '/health' || pathname === '/') {
+  // Handle both /api/health and /health paths
+  if (pathname === '/health' || pathname === '/' || pathname === '/api/health' || pathname === '/api/') {
     try {
       const { error } = await supabaseAdmin.from('agents').select('count', { count: 'exact', head: true });
       return res.status(200).json({
@@ -51,8 +51,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Register endpoint
-  if (pathname === '/v1/auth/register' && req.method === 'POST') {
+  // Register endpoint - handle both /api/v1/auth/register and /v1/auth/register
+  if ((pathname === '/v1/auth/register' || pathname === '/api/v1/auth/register') && req.method === 'POST') {
     const { agent_name, moltbook_username, email, password } = req.body || {};
 
     if (!agent_name || !/^[a-zA-Z0-9_-]{3,64}$/.test(agent_name)) {
