@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from './_lib/supabase';
-import { setCorsHeaders } from './_lib/auth';
+import { supabaseAdmin } from './lib/supabase';
+import { setCorsHeaders } from './lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
