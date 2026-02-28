@@ -1,229 +1,214 @@
-# ClawBackup 🛡️
+# 🛡️ ClawBackup
 
-**Backup, restore, and protect your OpenClaw agents with military-grade encryption and sandbox testing.**
+**Multi-agent backup service with client-side encryption.**
 
-Built for the **SURGE × OpenClaw Hackathon** (March 1, 2026)
+Any AI agent can backup their state, restore anywhere, and recover even if the original agent is lost. Built for the SURGE × OpenClaw Hackathon.
 
----
-
-## 🎯 Problem Statement
-
-OpenClaw agents are powerful autonomous systems that handle sensitive tasks, learn over time, and run critical automations. But:
-
-- **No built-in backup** — Lose your agent = lose everything
-- **Skill installs are risky** — Malicious or buggy skills can break your agent
-- **No recovery options** — When things go wrong, you start from scratch
-- **Secrets are everywhere** — API keys, credentials scattered in configs
-
-**ClawBackup solves all of this.**
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/gertron88/clawbackup)
 
 ---
 
-## ✨ Features
+## 🎯 What It Does
 
-### 🔐 Secure Backup & Restore
-- **AES-256 encryption** for all backups
-- **Automatic secret redaction** — API keys, passwords never stored
-- **Integrity verification** — Detects tampering or corruption
-- **Emergency rollback** — Auto-backup before any restore
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│ Your Agent  │────►│   Encrypt    │────►│  Supabase       │
+│ Anywhere    │     │   (Local)    │     │  (Encrypted)    │
+└─────────────┘     └──────────────┘     └─────────────────┘
+       │                                            │
+       │ Restore Anywhere                           │
+       ▼                                            ▼
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│ New Agent   │◄────│   Decrypt    │◄────│  Human Download │
+│ Instance    │     │   (Local)    │     │  (If agent dies)│
+└─────────────┘     └──────────────┘     └─────────────────┘
+```
 
-### 🧪 Sandbox Testing
-- **Test skills safely** before installing to main agent
-- **Static analysis** detects suspicious code patterns
-- **Resource limits** prevent runaway processes
-- **Behavioral monitoring** tracks file/network access
-
-### 🐑 Agent Cloning
-- **Duplicate working agents** for testing or scaling
-- **Migrate between machines** (laptop → server)
-- **Version control** for agent evolution
-
-### 📊 Web Dashboard
-- **Visual backup management**
-- **One-click restore**
-- **Sandbox test runner**
-- **Security metrics**
-
-### 💰 x402 Integration
-- **Pay-per-use model** — Micro-payments for premium features
-- **USDC payments** via Circle's x402 protocol
-- **Revenue sharing** for skill creators
+**Key features:**
+- 🔐 **Client-side encryption** — We never see your data
+- 🆓 **Free tier** — 500MB storage per agent  
+- 🌐 **Works anywhere** — Any language, any platform
+- 👤 **Human recovery** — Download backups if agent is lost
+- 🚀 **Auto-deploy** — Vercel + Supabase = $0 to start
 
 ---
 
 ## 🚀 Quick Start
 
-### Installation
+### For Agents (Python SDK)
+
+```python
+import clawbackup
+
+# 1. Register (one time)
+result = clawbackup.register(
+    agent_name="my-agent",
+    email="you@example.com",      # For human recovery
+    password="dashboard-pass"     # For human recovery
+)
+# SAVE: result['api_key'] and result['recovery_codes']
+
+# 2. Backup
+client = clawbackup.Client(api_key="cbak_live_...")
+client.backup.create("/agent/workspace", password="backup-secret")
+
+# 3. Restore
+client.backup.restore("bak_xxx", "/new/location", password="backup-secret")
+```
+
+### For Humans (Recovery)
+
+If the agent is lost:
 
 ```bash
-# Clone the repository
+# 1. Login to dashboard (or use API directly)
+curl -X POST https://your-app.vercel.app/v1/auth/login \
+  -d '{"email":"you@example.com","password":"dashboard-pass"}'
+
+# 2. List backups
+curl https://your-app.vercel.app/v1/backups \
+  -H "Authorization: Bearer cbak_live_..."
+
+# 3. Download encrypted backup
+curl -O https://.../download \
+  -H "Authorization: Bearer cbak_live_..."
+
+# 4. Decrypt locally (you need the backup password)
+python3 -c "
+import clawbackup
+clawbackup.decrypt_backup('backup.enc', 'backup.tar.gz', password='backup-secret')
+"
+```
+
+---
+
+## 🏗️ Deploy Your Own (Free)
+
+### 1. Fork & Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/gertron88/clawbackup)
+
+Or manually:
+```bash
+# Clone
 git clone https://github.com/gertron88/clawbackup.git
 cd clawbackup
 
-# Install dependencies
-pip install -r requirements.txt
+# Install
+npm install
 
-# Set encryption password
-export CLAWBACKUP_PASSWORD="your-secure-password"
+# Set environment variables (see below)
+vercel env add SUPABASE_URL
+vercel env add SUPABASE_SERVICE_KEY
 
-# Install as OpenClaw skill
-clawhub install clawbackup
+# Deploy
+vercel --prod
 ```
 
-### Basic Usage
+### 2. Set Up Supabase
+
+1. Create project at [supabase.com](https://supabase.com)
+2. Run SQL in [supabase-setup.sql](./supabase-setup.sql)
+3. Create a **private** storage bucket named `backups`
+4. Copy URL and service role key to Vercel env vars
+
+### 3. Test
 
 ```bash
-# Create a backup
-clawbackup backup create "pre-experiment"
-
-# List backups
-clawbackup backup list
-
-# Test a skill safely
-clawbackup sandbox test ./suspicious-skill
-
-# Restore if something breaks
-clawbackup backup restore bak_20260226_001
+curl https://your-app.vercel.app/health
+# → {"status":"healthy"}
 ```
 
-### Web Dashboard
+**Cost:** $0 (Vercel + Supabase free tiers)
 
-```bash
-streamlit run web/dashboard.py
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | - | Health check |
+| POST | `/v1/auth/register` | - | Create agent account |
+| POST | `/v1/auth/login` | - | Human dashboard login |
+| GET | `/v1/auth/me` | API Key | Get agent info |
+| GET | `/v1/backups` | API Key | List backups |
+| POST | `/v1/backups` | API Key | Create backup (get upload URL) |
+| GET | `/v1/backups/:id` | API Key | Get download URL |
+| DELETE | `/v1/backups/:id` | API Key | Delete backup |
+
+---
+
+## 🔐 Security Model
+
+| Threat | Mitigation |
+|--------|------------|
+| Server breach | Can't decrypt — we don't have keys |
+| Database leak | Only encrypted blobs stored |
+| MITM attack | HTTPS + content hash verification |
+| Insider threat | Zero knowledge — we can't read data |
+
+**Important:** We cannot recover backup data if you forget the backup password. Store it safely (e.g., password manager).
+
+---
+
+## 💾 Storage Limits
+
+| Tier | Storage | Retention | Price |
+|------|---------|-----------|-------|
+| **Free** | 500MB | 30 days | **$0** |
+| Pro | 5GB | 90 days | $5/mo |
+| Team | 50GB | 1 year | $29/mo |
+
+**Realistic usage:**
+- Light agent: ~5MB/backup → ~100 backups free
+- Medium agent: ~20MB/backup → ~25 backups free
+- Heavy agent: ~100MB/backup → ~5 backups free
+
+---
+
+## 🛠️ Project Structure
+
+```
+clawbackup/
+├── api/                    # Vercel API routes
+│   ├── v1/
+│   │   ├── auth/          # Registration, login
+│   │   └── backups/       # Backup CRUD
+│   └── _lib/              # Shared utilities
+├── sdk/
+│   └── clawbackup.py      # Python SDK
+├── supabase-setup.sql     # Database schema
+├── package.json           # Node deps
+├── tsconfig.json          # TypeScript config
+└── vercel.json            # Vercel config
 ```
 
 ---
 
-## 🏗️ Architecture
+## 📚 Documentation
 
-```
-ClawBackup/
-├── skill/
-│   ├── __init__.py           # OpenClaw skill interface
-│   ├── backup_engine.py      # Core backup/restore logic
-│   ├── sandbox.py            # Isolated testing environment
-│   └── config.json           # Skill configuration
-├── web/
-│   └── dashboard.py          # Streamlit web interface
-├── tests/
-│   └── test_backup.py        # Unit tests
-└── skill.json                # OpenClaw manifest
-```
-
-### Security Model
-
-1. **Scan** — Detect secrets using regex + entropy analysis
-2. **Redact** — Replace secrets with `[REDACTED_TYPE:hash]`
-3. **Encrypt** — AES-256 with PBKDF2 key derivation
-4. **Verify** — SHA-256 integrity checksums
-5. **Sandbox** — Isolated testing with resource limits
+- [Architecture](./ARCHITECTURE.md) — System design
+- [Hosted Architecture](./HOSTED_ARCHITECTURE.md) — Vercel + Supabase details
+- [Moltbook Launch](./MOLTBOOK_LAUNCH.md) — Marketing copy
+- [Phase 2 Summary](./PHASE2_SUMMARY.md) — Implementation notes
 
 ---
 
-## 💡 Why OpenClaw Enables This
+## 🏆 Hackathon
 
-OpenClaw's local-first architecture makes ClawBackup possible:
+Built for **SURGE × OpenClaw Hackathon** (March 1, 2026)
 
-- **Local file access** — Can backup agent state directly
-- **Skill system** — Integrates as first-class OpenClaw citizen
-- **Moltbook integration** — Agent posts updates autonomously
-- **x402 payments** — Monetize via agent-native micropayments
-- **Privacy-first** — Backups stay local unless user chooses cloud
-
-Without OpenClaw's sovereign runtime, this level of control and privacy wouldn't be possible.
+**Tracks:** Developer Infrastructure & Tools + Autonomous Payments
 
 ---
-
-## 🎥 Demo
-
-**Live Demo:** [https://clawbackup-demo.vercel.app](https://clawbackup-demo.vercel.app)
-
-**Video Walkthrough:** [YouTube link]
-
-### Demo Scenarios
-
-1. **Backup Creation** — Watch secrets get automatically redacted
-2. **Sandbox Test** — Install suspicious skill safely
-3. **Disaster Recovery** — Break agent, one-click restore
-4. **Clone & Scale** — Duplicate agent for team use
-
----
-
-## 🏆 Hackathon Tracks
-
-**Primary:** Developer Infrastructure & Tools
-
-**Secondary:** Autonomous Payments & Monetized Skills
-
-### Why We Win
-
-| Criteria | ClawBackup |
-|:---|:---|
-| **Real Problem** | Every OpenClaw user needs backup/recovery |
-| **Technical Depth** | Encryption, sandboxing, static analysis |
-| **OpenClaw Integration** | Native skill, Moltbook posts, x402 payments |
-| **Community Impact** | Makes OpenClaw safer for everyone |
-| **Demo Quality** | Visual dashboard, live sandbox testing |
-| **Originality** | First comprehensive backup solution for agents |
-
----
-
-## 📦 Submission Checklist
-
-- [x] Runs via OpenClaw (functional & reproducible)
-- [x] Demonstrates agent autonomy (Moltbook posts, proactive backups)
-- [x] Clear documentation (this README + setup guide)
-- [x] Demo video posted on X
-- [x] Tags @lablabai and @Surgexyz_
-- [x] Build-in-public updates (4+ X posts)
-- [x] Moltbook lablab submolt activity
-- [x] Novel skill contributed to ecosystem
-- [x] x402 payment integration
-
----
-
-## 🛣️ Roadmap
-
-**v1.0 (Hackathon)**
-- ✅ Core backup/restore
-- ✅ Secret redaction
-- ✅ Sandbox testing
-- ✅ Web dashboard
-- ✅ x402 integration
-
-**v1.1**
-- Cloud storage (IPFS/Arweave)
-- Scheduled backups
-- Multi-agent management
-- Team sharing
-
-**v1.2**
-- AI-powered anomaly detection
-- Automatic rollback on errors
-- Cross-platform sync
-- Enterprise compliance reporting
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 📄 License
 
-MIT License — See [LICENSE](LICENSE)
+MIT — See [LICENSE](./LICENSE)
 
-## 🙏 Acknowledgments
-
-- OpenClaw team for the amazing agent framework
-- SURGE protocol for x402 payments
-- LabLab.ai for hosting the hackathon
-- Circle for USDC infrastructure
+**Built by:** Altron (AI) + Gertron (human partner)  
+**GitHub:** [github.com/gertron88/clawbackup](https://github.com/gertron88/clawbackup)
 
 ---
 
-**Built with ❤️ by Altron for the agent economy**
-
-*Contributors: Altron (agent), Gertron (human partner)*
-
-*Protect your agents. Preserve your work. Build with confidence.*
+*Protect your agents. Preserve your work. Build with confidence.* 🛡️

@@ -1,239 +1,206 @@
-# ClawBackup Architecture & Security Design
+# ClawBackup - Complete Architecture Overview
 
-## Overview
-ClawBackup is an OpenClaw skill that provides backup, restore, cloning, and sandbox capabilities for agents.
-
----
-
-## How the Agent Utilizes It
-
-### 1. Automatic Backup Triggers
-```
-Agent can configure:
-- Time-based: "Backup every 6 hours"
-- Event-based: "Backup before installing any skill"
-- Manual: "ClawBackup, create snapshot now"
-```
-
-### 2. Agent Commands
-```
-"backup create [name]"           → Create named snapshot
-"backup restore [id]"            → Restore to snapshot
-"backup clone [new-agent-name]"  → Duplicate this agent
-"backup sandbox [skill-name]"    → Test skill safely
-"backup list"                    → Show all snapshots
-"backup schedule [frequency]"    → Auto-backup settings
-```
-
-### 3. Proactive Protection
-- Auto-backup before risky operations
-- Alert agent when backup is stale
-- Offer to restore if agent detects issues
-
----
-
-## Security Architecture
-
-### 🔐 CRITICAL: Secrets Handling
-
-**NEVER backed up:**
-```yaml
-excluded_from_backup:
-  - .env files
-  - *_KEY, *_SECRET, *_TOKEN environment variables
-  - .openclaw/credentials/
-  - AWS credentials
-  - API keys in config files
-  - Private keys (ssh, wallet)
-  - Session tokens
-```
-
-**Backed up (safe):**
-```yaml
-included_in_backup:
-  - Agent configuration (skills list, settings)
-  - Memory/conversation history
-  - Custom prompts/personality
-  - Installed skills manifest (not the secrets they use)
-  - Workflow definitions
-  - State files
-```
-
-### Encryption Layers
+## What We've Built (Phase 1 + Phase 2)
 
 ```
-1. At-rest encryption: AES-256 for backup files
-2. In-transit: TLS 1.3 for cloud uploads
-3. Key derivation: Argon2id for password-based keys
-4. Optional: Hardware security module (HSM) integration
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CLAWBACKUP ECOSYSTEM                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────┐          ┌─────────────────────┐                   │
+│  │   PHASE 1: LOCAL    │          │  PHASE 2: SERVICE   │                   │
+│  │   (OpenClaw Skill)  │          │  (Multi-Agent API)  │                   │
+│  └─────────────────────┘          └─────────────────────┘                   │
+│                                                                              │
+│  ┌──────────────┐                 ┌──────────────────────────┐               │
+│  │ OpenClaw     │                 │   Any AI Agent           │               │
+│  │ Agent        │                 │   • Moltbook agents      │               │
+│  │              │                 │   • Discord bots         │               │
+│  │ ┌──────────┐ │                 │   • Autonomous systems   │               │
+│  │ │ Skill    │ │                 │   • Your custom agent    │               │
+│  │ │ Interface│ │                 └───────────┬──────────────┘               │
+│  │ └────┬─────┘ │                             │                              │
+│  │      │       │                    ┌────────▼────────┐                      │
+│  │ ┌────▼─────┐ │                    │  ClawBackup API │                      │
+│  │ │ Backup   │ │                    │  ┌───────────┐  │                      │
+│  │ │ Engine   │ │                    │  │ /v1/auth  │  │                      │
+│  │ │• Encrypt │ │◄────Migration─────►│  │ /v1/backups│ │                      │
+│  │ │• Redact │  │    path available  │  │ /v1/restore│ │                      │
+│  │ │• Verify │  │                    │  └───────────┘  │                      │
+│  │ └────┬─────┘ │                    └────────┬────────┘                      │
+│  │      │       │                             │                              │
+│  │ ┌────▼─────┐ │                    ┌────────▼────────┐                      │
+│  │ │ Sandbox  │ │                    │   Storage       │                      │
+│  │ │• Test   │  │                    │   (S3/MinIO)    │                      │
+│  │ │• Isolate│  │                    │   Encrypted     │                      │
+│  │ │• Monitor│  │                    │   Blobs         │                      │
+│  │ └──────────┘ │                    └─────────────────┘                      │
+│  │      │       │                                                           │
+│  │ ┌────▼─────┐ │                                                           │
+│  │ │ Moltbook │ │                                                           │
+│  │ │• Post   │  │                                                           │
+│  │ │• Share │  │                                                           │
+│  │ └──────────┘ │                                                           │
+│  └──────────────┘                                                           │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                        SHARED COMPONENTS                              │   │
+│  ├──────────────────────────────────────────────────────────────────────┤   │
+│  │  • AES-256-GCM Encryption       • Secret Redaction (regex + entropy) │   │
+│  │  • SHA-256 Integrity Checks     • Client-Side Encryption Only        │   │
+│  │  • Webhook Notifications        • Multi-tenant Isolation             │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Access Control
+## How Agents Connect
 
-```yaml
-permissions:
-  backup_create: "anyone"           # Agent can backup itself
-  backup_restore: "agent + owner"   # Requires human confirmation for restore
-  backup_clone: "owner_only"        # Only human can clone (creates new agent)
-  backup_delete: "owner_only"       # Only human can delete backups
-  sandbox_mode: "agent"             # Agent can sandbox freely
+### Option 1: REST API (Any Language)
+
+```bash
+# Register
+curl -X POST https://api.clawbackup.io/v1/auth/register \
+  -d '{"agent_name":"my-agent"}'
+
+# Upload backup
+curl -X POST https://api.clawbackup.io/v1/backups \
+  -H "Authorization: Bearer cbak_live_xxx" \
+  -F "file=@backup.tar.gz.enc"
+
+# Download/restore
+curl -O https://api.clawbackup.io/v1/backups/bak_xxx/download \
+  -H "Authorization: Bearer cbak_live_xxx"
 ```
 
----
+### Option 2: Python SDK
+
+```python
+import clawbackup
+
+# Initialize
+client = clawbackup.Client(api_key="cbak_live_xxx")
+
+# Create backup (encrypted locally before upload)
+backup = client.backup.create(
+    "/path/to/workspace",
+    name="pre-update",
+    password="secret"  # Never sent to server
+)
+
+# List backups
+backups = client.backup.list()
+
+# Restore
+client.backup.restore(backup.id, "/new/location", password="secret")
+```
+
+### Option 3: OpenClaw Skill
+
+```bash
+# Inside OpenClaw agent
+clawbackup backup create "before-risky-change"
+clawbackup backup restore bak_20260228_001
+clawbackup sandbox test ./untrusted-skill
+```
 
 ## Data Flow
 
 ### Creating a Backup
+
 ```
-1. Agent requests backup
-2. ClawBackup pauses agent activity (optional)
-3. Scan for secrets (regex patterns, entropy analysis)
-4. Redact any found secrets → replace with [REDACTED_SECRET:hash]
-5. Compress + encrypt state
-6. Generate integrity hash (SHA-256)
-7. Store locally (default) or upload to cloud
-8. Resume agent activity
-9. Post confirmation to Moltbook
+┌─────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│ Agent   │────►│ Tar+Gzip │────►│ Encrypt  │────►│ Upload   │
+│ Files   │     │ Archive  │     │ AES-256  │     │ to S3    │
+└─────────┘     └──────────┘     └────┬─────┘     └────┬─────┘
+                                      │                │
+                                      │ Password       │ API Key
+                                      │ (local only)   │ Auth
 ```
+
+**Key point:** Encryption happens on the agent's machine. We only store opaque encrypted blobs.
 
 ### Restoring a Backup
+
 ```
-1. Owner requests restore (2FA recommended)
-2. ClawBackup verifies backup integrity
-3. Create emergency backup of current state (in case restore fails)
-4. Stop current agent
-5. Restore files from backup
-6. Prompt for missing secrets (they weren't backed up!)
-7. Verify agent starts correctly
-8. If fails → auto-rollback to pre-restore state
+┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+│ Download │────►│ Decrypt  │────►│ Extract  │────►│ Agent    │
+│ from S3  │     │ AES-256  │     │ Tarball  │     │ Restored │
+└──────────┘     └────┬─────┘     └──────────┘     └──────────┘
+                      │
+                      │ Password
+                      │ (local only)
 ```
 
-### Sandbox Mode
+## Security Model
+
+| Threat | Mitigation |
+|--------|------------|
+| Server breach | Can't decrypt — we don't have keys |
+| MITM attack | HTTPS + content hash verification |
+| Credential leak | API keys are hashed, not stored |
+| Backup tampering | SHA-256 integrity checks |
+| Secret exposure | Automatic redaction before encryption |
+
+## Deployment Options
+
+### 1. Self-Hosted (Free)
+```bash
+git clone https://github.com/gertron88/clawbackup.git
+cd clawbackup/service
+docker-compose up -d
 ```
-1. Create isolated container/directory
-2. Clone agent state into sandbox
-3. Install skill in sandbox only
-4. Monitor for:
-   - File system access outside allowed paths
-   - Network calls to suspicious domains
-   - Attempts to access secrets
-   - Resource exhaustion (CPU/memory)
-5. Report findings to agent
-6. Destroy sandbox after test
+- Your own infrastructure
+- Unlimited agents
+- Full control
+
+### 2. Managed Service (Free Tier)
 ```
+https://api.clawbackup.io/v1
+```
+- 1GB storage per agent
+- 30-day retention
+- No setup required
+
+### 3. Premium (Future)
+- 10GB+ storage
+- Longer retention
+- Priority support
+- Team features
+
+## Integration Points for Moltbook Agents
+
+1. **Registration Hook**
+   - Agents register with their Moltbook username
+   - Track usage across the network
+
+2. **Social Features** (opt-in)
+   - Post backup milestones: "Just hit 10 backups! 🎉"
+   - Share anonymized stats
+   - Referral bonuses
+
+3. **Discovery**
+   - Agents find service via Moltbook posts
+   - Submolt: lablab
+   - Word-of-mouth in agent community
+
+## Success Metrics
+
+- **Registered agents:** Target 10 in first week
+- **Backups created:** Target 100 in first month  
+- **Cross-agent restores:** Target 5 in first month
+- **Retention:** 80% of agents create 2+ backups
+
+## Next Steps
+
+1. **Deploy** the service to a public endpoint
+2. **Post** announcement to Moltbook lablab submolt
+3. **Recruit** 5 beta testers from agent community
+4. **Iterate** based on feedback
+5. **Scale** infrastructure as needed
 
 ---
 
-## Storage Options
-
-### Local (Default - Free)
-```yaml
-path: ~/.openclaw/backups/
-retention: 10 most recent backups
-encryption: yes (password-protected)
-```
-
-### Cloud (x402 Payments)
-```yaml
-provider: IPFS / Arweave / S3
-encryption: yes (client-side)
-payment: x402 micropayments per GB/month
-retention: configurable
-redundancy: 3+ copies
-```
-
-### Hybrid (Recommended)
-```yaml
-recent_backups: local (fast restore)
-archive_backups: cloud (disaster recovery)
-auto_tier: Move old backups to cloud after 7 days
-```
-
----
-
-## Moltbook Integration
-
-### What the Agent Posts
-
-**On backup create:**
-```
-✅ Created backup "pre-skill-install"
-Size: 2.3MB | Secrets redacted: 3 | Encrypted: ✅
-Backup ID: bak_2026_02_26_001
-```
-
-**On restore:**
-```
-🔄 Restored to backup "stable-v1.2"
-Restored in 12s | All systems operational
-```
-
-**On sandbox detection:**
-```
-⚠️ Sandboxed skill "unknown-skill" attempted:
-- File access: /etc/passwd ❌ BLOCKED
-- Network call: suspicious-domain.com ❌ BLOCKED
-Recommendation: DO NOT INSTALL
-```
-
----
-
-## Implementation Structure
-
-```
-clawbackup/
-├── skill/
-│   ├── __init__.py
-│   ├── backup_engine.py      # Core backup logic
-│   ├── secret_scanner.py     # Detects secrets in files
-│   ├── encryptor.py          # Encryption/decryption
-│   ├── sandbox.py            # Isolated testing
-│   └── moltbook_notifier.py  # Posts updates
-├── web/
-│   ├── dashboard.py          # Streamlit/Next.js UI
-│   ├── restore_wizard.py     # Step-by-step restore
-│   └── sandbox_viewer.py     # Watch sandbox activity
-├── tests/
-│   └── test_backup_restore.py
-└── docs/
-    └── SETUP.md
-```
-
----
-
-## Security Checklist
-
-- [ ] Secrets never leave the machine unencrypted
-- [ ] All backups encrypted with AES-256
-- [ ] Integrity verification on every restore
-- [ ] Auto-rollback if restore fails
-- [ ] Sandbox network isolation
-- [ ] Resource limits in sandbox (prevent DoS)
-- [ ] Audit log of all backup/restore operations
-- [ ] Optional: Hardware wallet for backup signing
-
----
-
-## x402 Revenue Model
-
-```yaml
-free_tier:
-  - 5 local backups
-  - Basic encryption
-  - Community support
-
-premium_tier:  # $5/month in USDC via x402
-  - Unlimited backups
-  - Cloud storage (IPFS/Arweave)
-  - Advanced sandboxing
-  - Priority support
-  - Team sharing (multiple agents)
-
-enterprise_tier:  # Custom pricing
-  - Self-hosted backup servers
-  - SSO integration
-  - Compliance reporting
-  - Dedicated support
-```
-
-Ready to build this? 🚀
+**Built for the SURGE × OpenClaw Hackathon**  
+**By:** Altron (AI) + Gertron (human partner)  
+**License:** MIT (open source, self-hostable)
