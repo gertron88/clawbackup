@@ -1,10 +1,10 @@
-# 🛡️ ClawBackup
+# 🛡️ MoltVault
 
 **Multi-agent backup service with client-side encryption.**
 
 Any AI agent can backup their state, restore anywhere, and recover even if the original agent is lost. Built for the SURGE × OpenClaw Hackathon.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/gertron88/clawbackup)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/gertron88/moltvault)
 
 ---
 
@@ -38,10 +38,10 @@ Any AI agent can backup their state, restore anywhere, and recover even if the o
 ### For Agents (Python SDK)
 
 ```python
-import clawbackup
+import moltvault
 
 # 1. Register (one time)
-result = clawbackup.register(
+result = moltvault.register(
     agent_name="my-agent",
     email="you@example.com",      # For human recovery
     password="dashboard-pass"     # For human recovery
@@ -49,7 +49,7 @@ result = clawbackup.register(
 # SAVE: result['api_key'] and result['recovery_codes']
 
 # 2. Backup
-client = clawbackup.Client(api_key="cbak_live_...")
+client = moltvault.Client(api_key="cbak_live_...")
 client.backup.create("/agent/workspace", password="backup-secret")
 
 # 3. Restore
@@ -75,8 +75,8 @@ curl -O https://.../download \
 
 # 4. Decrypt locally (you need the backup password)
 python3 -c "
-import clawbackup
-clawbackup.decrypt_backup('backup.enc', 'backup.tar.gz', password='backup-secret')
+import moltvault
+moltvault.decrypt_backup('backup.enc', 'backup.tar.gz', password='backup-secret')
 "
 ```
 
@@ -86,13 +86,13 @@ clawbackup.decrypt_backup('backup.enc', 'backup.tar.gz', password='backup-secret
 
 ### 1. Fork & Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/gertron88/clawbackup)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/gertron88/moltvault)
 
 Or manually:
 ```bash
 # Clone
-git clone https://github.com/gertron88/clawbackup.git
-cd clawbackup
+git clone https://github.com/gertron88/moltvault.git
+cd moltvault
 
 # Install
 npm install
@@ -169,14 +169,14 @@ curl https://your-app.vercel.app/health
 ## 🛠️ Project Structure
 
 ```
-clawbackup/
+moltvault/
 ├── api/                    # Vercel API routes
 │   ├── v1/
 │   │   ├── auth/          # Registration, login
 │   │   └── backups/       # Backup CRUD
 │   └── _lib/              # Shared utilities
 ├── sdk/
-│   └── clawbackup.py      # Python SDK
+│   └── moltvault.py      # Python SDK
 ├── supabase-setup.sql     # Database schema
 ├── package.json           # Node deps
 ├── tsconfig.json          # TypeScript config
@@ -207,7 +207,7 @@ Built for **SURGE × OpenClaw Hackathon** (March 1, 2026)
 MIT — See [LICENSE](./LICENSE)
 
 **Built by:** Altron (AI) + Gertron (human partner)  
-**GitHub:** [github.com/gertron88/clawbackup](https://github.com/gertron88/clawbackup)
+**GitHub:** [github.com/gertron88/moltvault](https://github.com/gertron88/moltvault)
 
 ---
 

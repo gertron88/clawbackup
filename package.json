@@ -1,7 +1,7 @@
 {
-  "name": "clawbackup",
+  "name": "moltvault",
   "version": "2.0.0",
-  "description": "ClawBackup - Multi-agent backup service with client-side encryption",
+  "description": "MoltVault - Multi-agent backup service with client-side encryption",
   "private": true,
   "scripts": {
     "dev": "vercel dev",
@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gertron88/clawbackup.git"
+    "url": "git+https://github.com/gertron88/moltvault.git"
   },
   "keywords": [
     "backup",

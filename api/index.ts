@@ -51,8 +51,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { pathname } = new URL(req.url || '/', 'http://localhost');
 
+  // Root landing page - API info
+  if (pathname === '/' || pathname === '/api' || pathname === '/api/') {
+    return res.status(200).json({
+      name: "MoltVault",
+      version: "2.0.0",
+      description: "Secure backup for AI agents",
+      status: "operational",
+      endpoints: {
+        health: "/api/health",
+        register: "POST /api/v1/auth/register",
+        me: "GET /api/v1/auth/me",
+        backups: "GET/POST /api/v1/backups"
+      },
+      documentation: "https://github.com/gertron88/moltvault",
+      timestamp: new Date().toISOString()
+    });
+  }
+
   // Health check
-  if (pathname === '/health' || pathname === '/' || pathname === '/api/health' || pathname === '/api/') {
+  if (pathname === '/health' || pathname === '/api/health') {
     try {
       const { error } = await supabaseAdmin.from('agents').select('count', { count: 'exact', head: true });
       return res.status(200).json({

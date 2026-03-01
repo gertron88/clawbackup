@@ -1,10 +1,11 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="moltvault",
-    version="2.0.0",
-    description="MoltVault - Secure backup for AI agents",
-    author="Gertron",
+    name="moltvault-agent",
+    version="2.0.1",
+    description="MoltVault Agent SDK - Easy backup/restore for AI agents (Hosted Version)",
+    author="Altron",
+    author_email="",
     url="https://github.com/gertron88/moltvault",
     py_modules=["moltvault"],
     install_requires=[
@@ -19,5 +20,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: System :: Archiving :: Backup",
     ],
-    keywords="backup agent ai automation cloud",
+    keywords="backup agent ai automation cloud supabase vercel",
 )

@@ -1,5 +1,5 @@
 """
-ClawBackup Agent SDK - Hosted Version
+MoltVault Agent SDK - Hosted Version
 Works with Vercel + Supabase backend
 """
 
@@ -26,15 +26,15 @@ class BackupInfo:
     tags: List[str]
 
 
-class ClawBackupError(Exception):
+class MoltVaultError(Exception):
     pass
 
 
-class AuthenticationError(ClawBackupError):
+class AuthenticationError(MoltVaultError):
     pass
 
 
-class QuotaExceededError(ClawBackupError):
+class QuotaExceededError(MoltVaultError):
     pass
 
 
@@ -113,11 +113,11 @@ class BackupManager:
         source_path = Path(source_path).expanduser().resolve()
         
         if not source_path.exists():
-            raise ClawBackupError(f"Source path does not exist: {source_path}")
+            raise MoltVaultError(f"Source path does not exist: {source_path}")
         
         password = password or os.environ.get('BACKUP_PASSWORD')
         if not password:
-            raise ClawBackupError("Encryption password required")
+            raise MoltVaultError("Encryption password required")
         
         # Create tarball
         with tempfile.NamedTemporaryFile(suffix='.tar.gz', delete=False) as tmp:
@@ -163,7 +163,7 @@ class BackupManager:
             )
             
             if not upload_res.ok:
-                raise ClawBackupError(f"Upload failed: {upload_res.text}")
+                raise MoltVaultError(f"Upload failed: {upload_res.text}")
             
             return BackupInfo(
                 id=response['backup_id'],
@@ -186,7 +186,7 @@ class BackupManager:
         
         password = password or os.environ.get('BACKUP_PASSWORD')
         if not password:
-            raise ClawBackupError("Encryption password required")
+            raise MoltVaultError("Encryption password required")
         
         # Get download URL
         response = self.client._request('GET', f'/v1/backups/{backup_id}')
@@ -194,7 +194,7 @@ class BackupManager:
         # Download
         download_res = requests.get(response['download_url'], stream=True)
         if not download_res.ok:
-            raise ClawBackupError(f"Download failed: {download_res.status_code}")
+            raise MoltVaultError(f"Download failed: {download_res.status_code}")
         
         # Save to temp
         with tempfile.NamedTemporaryFile(suffix='.enc', delete=False) as tmp:
@@ -263,7 +263,7 @@ class BackupManager:
         # Download
         download_res = requests.get(response['download_url'], stream=True)
         if not download_res.ok:
-            raise ClawBackupError(f"Download failed: {download_res.status_code}")
+            raise MoltVaultError(f"Download failed: {download_res.status_code}")
         
         with open(output_path, 'wb') as f:
             for chunk in download_res.iter_content(chunk_size=8192):
@@ -284,11 +284,11 @@ class Client:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.clawbackup.io"
+        base_url: str = "https://api.moltvault.io"
     ):
         self.api_key = api_key or os.environ.get('CLAWBACKUP_API_KEY')
         if not self.api_key:
-            raise ClawBackupError("API key required")
+            raise MoltVaultError("API key required")
         
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
@@ -307,13 +307,13 @@ class Client:
         elif response.status_code == 403:
             raise QuotaExceededError("Storage quota exceeded")
         elif response.status_code == 404:
-            raise ClawBackupError("Backup not found")
+            raise MoltVaultError("Backup not found")
         elif not response.ok:
             try:
                 error = response.json().get('error', response.text)
             except:
                 error = response.text
-            raise ClawBackupError(f"API error: {error}")
+            raise MoltVaultError(f"API error: {error}")
         
         return response.json()
     
@@ -342,7 +342,7 @@ def register(
     moltbook_username: Optional[str] = None,
     email: Optional[str] = None,
     password: Optional[str] = None,
-    base_url: str = "https://api.clawbackup.io"
+    base_url: str = "https://api.moltvault.io"
 ) -> Dict:
     """Register a new agent. Returns dict with api_key and recovery_codes."""
     response = requests.post(
@@ -356,7 +356,7 @@ def register(
     )
     
     if not response.ok:
-        raise ClawBackupError(f"Registration failed: {response.text}")
+        raise MoltVaultError(f"Registration failed: {response.text}")
     
     return response.json()
 
@@ -368,10 +368,10 @@ def decrypt_backup(encrypted_path: Union[str, Path], output_path: Union[str, Pat
     Use this for human recovery when agent is lost:
     
     ```python
-    import clawbackup
+    import moltvault
     
     # After downloading from dashboard
-    clawbackup.decrypt_backup('backup.enc', 'backup.tar.gz', password='secret')
+    moltvault.decrypt_backup('backup.enc', 'backup.tar.gz', password='secret')
     
     # Then extract
     import tarfile
@@ -385,7 +385,7 @@ def decrypt_backup(encrypted_path: Union[str, Path], output_path: Union[str, Pat
 __all__ = [
     'Client',
     'BackupInfo',
-    'ClawBackupError',
+    'MoltVaultError',
     'AuthenticationError',
     'QuotaExceededError',
     'snap',
