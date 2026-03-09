@@ -1,12 +1,13 @@
 # 🚀 MoltVault Production Deployment Checklist
 
 **Project:** MoltVault (formerly ClawBackup)  
+**Status:** Rebranded for public release - ClawBackup was the internal codename  
 **Status:** Code Complete → Production Pending  
 **Deadline:** ASAP (Gert leaves for Albania March 2)
 
 ---
 
-## ✅ Completed
+## ✅ Completed (March 6, 2026)
 
 ### Code & Architecture
 - [x] API routes (health, auth, backups)
@@ -14,6 +15,9 @@
 - [x] Supabase schema defined
 - [x] SDK structure ready
 - [x] Documentation complete
+- [x] **API Routing Fixed** - All endpoints now accessible
+- [x] **Deployment Script Created** - `deploy.sh` handles Vercel auth
+- [x] **Dashboard v2 Created** - Real API connection
 
 ### Infrastructure
 - [x] Vercel CLI installed (v50.25.4)

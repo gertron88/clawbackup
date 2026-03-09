@@ -59,10 +59,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       description: "Secure backup for AI agents",
       status: "operational",
       endpoints: {
-        health: "/api/health",
+        health: "GET /api/health",
         register: "POST /api/v1/auth/register",
+        login: "POST /api/v1/auth/login",
         me: "GET /api/v1/auth/me",
-        backups: "GET/POST /api/v1/backups"
+        listBackups: "GET /api/v1/backups",
+        createBackup: "POST /api/v1/backups",
+        getBackup: "GET /api/v1/backups/:id",
+        deleteBackup: "DELETE /api/v1/backups/:id"
       },
       documentation: "https://github.com/gertron88/moltvault",
       timestamp: new Date().toISOString()
@@ -258,6 +262,103 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       expires_at: backup.expires_at,
       message: 'Use the upload_url to PUT your encrypted backup file'
     });
+  }
+
+  // Login endpoint (for human dashboard access)
+  if ((pathname === '/v1/auth/login' || pathname === '/api/v1/auth/login') && req.method === 'POST') {
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const { data: agent, error } = await supabaseAdmin
+      .from('agents')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !agent || !agent.password_hash) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const valid = await bcrypt.compare(password, agent.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    return res.status(200).json({
+      agent_id: agent.id,
+      agent_name: agent.agent_name,
+      token: 'session_' + Date.now(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    });
+  }
+
+  // Single backup operations (GET/DELETE /v1/backups/:id)
+  const backupMatch = pathname.match(/^\/v1\/backups\/([^\/]+)$/) || pathname.match(/^\/api\/v1\/backups\/([^\/]+)$/);
+  if (backupMatch) {
+    const backupId = backupMatch[1];
+    const agent = await authenticateAgent(req);
+    if (!agent) {
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+
+    const { data: backup, error } = await supabaseAdmin
+      .from('backups')
+      .select('*')
+      .eq('backup_id', backupId)
+      .eq('agent_id', agent.id)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !backup) {
+      return res.status(404).json({ error: 'Backup not found' });
+    }
+
+    // GET - Get backup metadata and download URL
+    if (req.method === 'GET') {
+      const { data: downloadData, error: downloadError } = await supabaseAdmin
+        .storage
+        .from(backup.storage_bucket)
+        .createSignedUrl(backup.storage_path, 60 * 5);
+
+      if (downloadError) {
+        return res.status(500).json({ error: 'Failed to generate download URL' });
+      }
+
+      return res.status(200).json({
+        backup_id: backup.backup_id,
+        name: backup.name,
+        size_bytes: backup.size_bytes,
+        content_hash: backup.content_hash,
+        tags: backup.tags,
+        created_at: backup.created_at,
+        expires_at: backup.expires_at,
+        download_url: downloadData.signedUrl,
+        expires_in: 300
+      });
+    }
+
+    // DELETE - Soft delete backup
+    if (req.method === 'DELETE') {
+      await supabaseAdmin
+        .from('backups')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', backup.id);
+
+      await supabaseAdmin
+        .from('agents')
+        .update({
+          storage_used_gb: Math.max(0, agent.storage_used_gb - (backup.size_bytes / (1024 * 1024 * 1024)))
+        })
+        .eq('id', agent.id);
+
+      return res.status(200).json({ success: true, message: 'Backup marked for deletion' });
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   return res.status(404).json({ error: 'Not found', path: pathname });
